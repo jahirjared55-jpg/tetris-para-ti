@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#211533">
+<title>Un juego para ti 💗</title>
+<style>
+:root{--bg:#171124;--panel:#251a38;--pink:#ff79bd;--pink2:#ffb5dc;--lav:#b99aff;--text:#fff2fb;--muted:#d5c4e8;--mint:#9df5dc}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#38214f 0,#171124 58%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,sans-serif;display:flex;justify-content:center;padding:16px 12px 24px}
+main{width:min(100%,460px)}
+header{text-align:center;margin:4px 0 14px}
+.pixel-title{font-family:monospace;font-weight:900;letter-spacing:1px;color:var(--pink2);text-shadow:3px 3px 0 #6c397e; font-size:clamp(24px,7vw,34px);margin:4px 0}
+.subtitle{color:var(--muted);font-size:14px;margin:0}
+.panel{background:rgba(37,26,56,.94);border:2px solid #65477c;border-radius:14px;padding:12px;box-shadow:0 8px 0 #100b19}
+.game-layout{display:grid;grid-template-columns:minmax(0,1fr) 104px;gap:10px;align-items:start}
+canvas{display:block;width:100%;height:auto;image-rendering:pixelated;border:3px solid #76508f;border-radius:5px;background:#100c1b;touch-action:none}
+.side{display:flex;flex-direction:column;gap:9px}
+.stat{background:#171124;border:1px solid #57406c;border-radius:9px;padding:8px;text-align:center}
+.stat small{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:1px}
+.stat strong{font:700 19px monospace;color:var(--mint)}
+.next-label{font-size:11px;color:var(--muted);text-align:center;margin-bottom:4px}
+#next{width:100%;height:auto}
+.message{min-height:64px;margin-top:12px;padding:12px 10px;border:1px dashed #a46fc0;border-radius:10px;background:#1c142b;text-align:center;display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1.4}
+.message b{color:var(--pink2)}
+.actions{display:flex;gap:8px;margin-top:10px}
+button{border:0;border-radius:10px;padding:12px 10px;font-weight:800;font-size:14px;cursor:pointer;touch-action:manipulation}
+.primary{background:var(--pink);color:#29152c;box-shadow:0 3px 0 #a83d7c}
+.secondary{background:#4b3562;color:white;border:1px solid #80619b}
+.actions button{flex:1}
+.controls{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.ctrl{background:#3b2a50;color:#fff;border:1px solid #76508f;box-shadow:0 3px 0 #120d1b;font-size:21px;padding:13px 4px;min-height:48px}
+.ctrl:active,.primary:active,.secondary:active{transform:translateY(2px);box-shadow:none}
+.help{text-align:center;color:var(--muted);font-size:11px;margin:10px 0 0}
+.overlay{position:fixed;inset:0;background:rgba(12,7,19,.9);display:none;align-items:center;justify-content:center;padding:20px;z-index:5}
+.overlay.show{display:flex}
+.modal{width:min(100%,390px);text-align:center;background:#251a38;border:3px solid var(--pink);border-radius:16px;padding:24px 18px;box-shadow:0 0 0 5px #59315e,0 12px 0 #100b19}
+.big-heart{font-size:42px;image-rendering:pixelated;filter:drop-shadow(3px 3px 0 #7a3b80)}
+.modal h2{font:900 25px monospace;color:var(--pink2);line-height:1.25;margin:12px 0}
+.modal p{color:var(--muted);line-height:1.5}
+.answers{display:grid;gap:10px;margin-top:18px}
+.answers button{font-size:16px;padding:14px}
+#yes{background:var(--pink);color:#29152c}
+#sure{background:#b99aff;color:#211533}
+#answerText{color:var(--mint);font-weight:800;min-height:28px}
+.footer{text-align:center;color:#a994bd;font-size:10px;margin:15px 0}
+@media(max-width:360px){.game-layout{grid-template-columns:minmax(0,1fr) 88px;gap:7px}.panel{padding:8px}.stat{padding:6px}.ctrl{padding:11px 2px}.pixel-title{font-size:24px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="pixel-title">♥ UN JUEGO PARA TI ♥</div>
+  <p class="subtitle">Unas líneas, unos bloques y algo que quiero decirte...</p>
+</header>
+<section class="panel">
+  <div class="game-layout">
+    <canvas id="game" width="240" height="400" aria-label="Tablero de Tetris"></canvas>
+    <aside class="side">
+      <div class="stat"><small>Puntos</small><strong id="score">0</strong></div>
+      <div class="stat"><small>Meta</small><strong id="goal">120</strong></div>
+      <div class="stat"><div class="next-label">SIGUIENTE</div><canvas id="next" width="96" height="80"></canvas></div>
+      <div class="stat"><small>Líneas</small><strong id="lines">0</strong></div>
+      <button id="pause" class="secondary">Pausar</button>
+    </aside>
+  </div>
+  <div id="message" class="message"></div>
+  <div class="actions">
+    <button id="start" class="primary">Empezar / Reiniciar</button>
+    <button id="sound" class="secondary">♫ Sonido: no</button>
+  </div>
+  <div class="controls" aria-label="Controles táctiles">
+    <button class="ctrl" data-act="left" aria-label="Mover a la izquierda">◀</button>
+    <button class="ctrl" data-act="rotate" aria-label="Girar pieza">↻</button>
+    <button class="ctrl" data-act="right" aria-label="Mover a la derecha">▶</button>
+    <button class="ctrl" data-act="drop" aria-label="Bajar pieza">▼</button>
+  </div>
+  <p class="help">En computadora: ← → mover · ↑ girar · ↓ bajar · espacio caída rápida. En celular usa los botones.</p>
+</section>
+<p class="footer">HECHO CON CARIÑO, BLOQUE POR BLOQUE ♥</p>
+</main>
+
+<div class="overlay" id="finalOverlay" role="dialog" aria-modal="true" aria-labelledby="finalTitle">
+  <div class="modal">
+    <div class="big-heart">♥ ✦ ♥</div>
+    <h2 id="finalTitle">¿QUIERES SER<br>MI NOVIA?</h2>
+    <p>Quería preguntártelo de una forma que fuera tan especial como lo eres para mí. 💗</p>
+    <div class="answers">
+      <button id="yes">SÍ, QUIERO ❤️</button>
+      <button id="sure">¡CLARO QUE SÍ! 💖</button>
+    </div>
+    <p id="answerText"></p>
+  </div>
+</div>
+<div class="overlay" id="thanksOverlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="big-heart">♥ ♥ ♥</div>
+    <h2>ACABAS DE HACERME MUY FELIZ</h2>
+    <p id="thanksText">Gracias por darme la oportunidad de vivir algo bonito contigo. 💗</p>
+    <button class="primary" id="closeThanks">Guardar este momento ♥</button>
+  </div>
+</div>
+
+<script>
+(() => {
+const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
+const nextCanvas = document.getElementById('next'), nctx = nextCanvas.getContext('2d');
+const scoreEl = document.getElementById('score'), linesEl = document.getElementById('lines');
+const messageEl = document.getElementById('message'), pauseBtn = document.getElementById('pause');
+const finalOverlay = document.getElementById('finalOverlay'), thanksOverlay = document.getElementById('thanksOverlay');
+const COLS=10, ROWS=20, SIZE=24, GOAL=120;
+const COLORS={I:'#8ce8ed',O:'#ffe58a',T:'#c9a1ff',S:'#9df5bc',Z:'#ff8cb6',J:'#8db8ff',L:'#ffb17e'};
+const SHAPES={
+ I:[[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+ O:[[1,1],[1,1]],
+ T:[[0,1,0],[1,1,1],[0,0,0]],
+ S:[[0,1,1],[1,1,0],[0,0,0]],
+ Z:[[1,1,0],[0,1,1],[0,0,0]],
+ J:[[1,0,0],[1,1,1],[0,0,0]],
+ L:[[0,0,1],[1,1,1],[0,0,0]]
+};
+const sweetMessages=[
+ {score:20,text:'<b>Me gusta mucho tenerte en mi vida.</b> Gracias por llegar y hacer mis días más bonitos.'},
+ {score:40,text:'<b>Me encanta conocerte cada vez más.</b> Quiero descubrir lo que te hace reír, soñar y sentir.'},
+ {score:60,text:'<b>No quiero que esto sea solo un momento bonito.</b> Quiero seguir creando recuerdos contigo.'},
+ {score:80,text:'<b>Me haces ilusión de una manera muy especial.</b> Y cada día tengo más ganas de elegirte.'},
+ {score:100,text:'<b>Ya casi llegas al final...</b> Hay una pregunta que llevo guardando para ti.'}
+];
+let board, piece, nextPiece, score=0, lines=0, running=false, paused=false, ended=false;
+let lastTime=0, dropCounter=0, dropInterval=850, unlocked=0, soundOn=false, audioCtx=null, raf=null;
+
+function randomPiece(){
+ const keys=Object.keys(SHAPES), type=keys[Math.floor(Math.random()*keys.length)];
+ return {type, matrix:SHAPES[type].map(r=>r.slice()), x:Math.floor(COLS/2)-Math.ceil(SHAPES[type][0].length/2), y:-1};
+}
+function reset(){
+ board=Array.from({length:ROWS},()=>Array(COLS).fill(0)); score=0;lines=0;unlocked=0;
+ nextPiece=randomPiece();piece=randomPiece();running=true;paused=false;ended=false;
+ finalOverlay.classList.remove('show');thanksOverlay.classList.remove('show');
+ scoreEl.textContent=score;linesEl.textContent=lines;pauseBtn.textContent='Pausar';
+ messageEl.textContent='';
+ draw();drawNext();if(raf)cancelAnimationFrame(raf);lastTime=0;dropCounter=0;raf=requestAnimationFrame(update);
+}
+function collide(p,dx=0,dy=0,matrix=p.matrix){
+ for(let y=0;y<matrix.length;y++)for(let x=0;x<matrix[y].length;x++)if(matrix[y][x]){
+  const nx=p.x+x+dx,ny=p.y+y+dy;
+  if(nx<0||nx>=COLS||ny>=ROWS)return true;
+  if(ny>=0&&board[ny][nx])return true;
+ }return false;
+}
+function merge(){
+ piece.matrix.forEach((row,y)=>row.forEach((v,x)=>{if(v&&piece.y+y>=0)board[piece.y+y][piece.x+x]=piece.type;}));
+ let cleared=0;
+ outer:for(let y=ROWS-1;y>=0;y--){for(let x=0;x<COLS;x++)if(!board[y][x])continue outer;board.splice(y,1);board.unshift(Array(COLS).fill(0));cleared++;y++;}
+ if(cleared){const pts=[0,10,25,45,70][cleared]||70;score+=pts;lines+=cleared;scoreEl.textContent=score;linesEl.textContent=lines;beep(660,0.07);checkMessages();}
+ piece=nextPiece;nextPiece=randomPiece();drawNext();
+ if(collide(piece)){running=false;messageEl.innerHTML='💗 ¡No pasa nada! Reinicia para seguir intentando. La pregunta te espera.';}
+}
+function checkMessages(){
+ while(unlocked<sweetMessages.length && score>=sweetMessages[unlocked].score){
+   messageEl.innerHTML=sweetMessages[unlocked].text;unlocked++;beep(880,0.09);
+ }
+ if(score>=GOAL){score=GOAL;scoreEl.textContent=score;finish();}
+}
+function rotate(matrix){return matrix[0].map((_,i)=>matrix.map(row=>row[i]).reverse());}
+function move(dx){if(!running||paused||ended)return;if(!collide(piece,dx,0)){piece.x+=dx;draw();}}
+function rotatePiece(){if(!running||paused||ended)return;const m=rotate(piece.matrix);if(!collide(piece,0,0,m)){piece.matrix=m;draw();beep(420,.04);}}
+function softDrop(){if(!running||paused||ended)return;if(!collide(piece,0,1)){piece.y++;score+=1;scoreEl.textContent=score;checkMessages();}else merge();draw();}
+function hardDrop(){if(!running||paused||ended)return;let d=0;while(!collide(piece,0,1)){piece.y++;d++;}score+=Math.min(d,4);scoreEl.textContent=score;merge();checkMessages();draw();}
+function drawCell(c,x,y,size=SIZE){c.fillStyle=COLORS[x]||x;c.fillRect(y*size+1,0,1,1);}
+function block(target,x,y,color,size){target.fillStyle=color;target.fillRect(x*size,y*size,size,size);target.fillStyle='rgba(255,255,255,.26)';target.fillRect(x*size+2,y*size+2,size-4,3);target.fillStyle='rgba(20,10,30,.25)';target.fillRect(x*size+2,y*size+size-4,size-4,2);target.strokeStyle='rgba(20,10,30,.45)';target.strokeRect(x*size+.5,y*size+.5,size-1,size-1);}
+function draw(){
+ ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#100c1b';ctx.fillRect(0,0,canvas.width,canvas.height);
+ ctx.strokeStyle='rgba(185,154,255,.09)';for(let x=0;x<=COLS;x++){ctx.beginPath();ctx.moveTo(x*SIZE,0);ctx.lineTo(x*SIZE,canvas.height);ctx.stroke();}for(let y=0;y<=ROWS;y++){ctx.beginPath();ctx.moveTo(0,y*SIZE);ctx.lineTo(canvas.width,y*SIZE);ctx.stroke();}
+ board.forEach((row,y)=>row.forEach((v,x)=>{if(v)block(ctx,x,y,COLORS[v],SIZE);}));
+ if(piece)piece.matrix.forEach((row,y)=>row.forEach((v,x)=>{if(v&&piece.y+y>=0)block(ctx,piece.x+x,piece.y+y,COLORS[piece.type],SIZE);}));
+ if(paused){ctx.fillStyle='rgba(16,12,27,.78)';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#ffb5dc';ctx.textAlign='center';ctx.font='bold 22px monospace';ctx.fillText('PAUSA',canvas.width/2,canvas.height/2);}
+}
+function drawNext(){
+ nctx.clearRect(0,0,nextCanvas.width,nextCanvas.height);nctx.fillStyle='#171124';nctx.fillRect(0,0,nextCanvas.width,nextCanvas.height);
+ if(!nextPiece)return;const m=nextPiece.matrix.filter(r=>r.some(Boolean));const w=Math.max(...m.map(r=>r.length));const s=16;const offsetX=Math.floor((nextCanvas.width-w*s)/2),offsetY=Math.floor((nextCanvas.height-m.length*s)/2);
+ m.forEach((r,y)=>r.forEach((v,x)=>{if(v)block(nctx,Math.floor((offsetX+x*s)/s),Math.floor((offsetY+y*s)/s),COLORS[nextPiece.type],s);}));
+}
+function update(time=0){
+ if(!running||ended)return;
+ const delta=time-lastTime;lastTime=time;
+ if(!paused){dropCounter+=delta;if(dropCounter>dropInterval){if(!collide(piece,0,1))piece.y++;else merge();dropCounter=0;}draw();}
+ raf=requestAnimationFrame(update);
+}
+function finish(){if(ended)return;ended=true;running=false;messageEl.innerHTML='💖 <b>Terminaste el juego...</b> ahora viene la pregunta más importante.';setTimeout(()=>finalOverlay.classList.add('show'),450);}
+function beep(freq=600,duration=.07){if(!soundOn)return;try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='square';o.frequency.value=freq;g.gain.value=.025;o.connect(g);g.connect(audioCtx.destination);o.start();g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);o.stop(audioCtx.currentTime+duration);}catch(e){}}
+document.getElementById('start').addEventListener('click',reset);
+pauseBtn.addEventListener('click',()=>{if(!running||ended)return;paused=!paused;pauseBtn.textContent=paused?'Continuar':'Pausar';draw();});
+document.getElementById('sound').addEventListener('click',e=>{soundOn=!soundOn;e.currentTarget.textContent='♫ Sonido: '+(soundOn?'sí':'no');if(soundOn)beep(660,.08);});
+document.querySelectorAll('[data-act]').forEach(b=>b.addEventListener('click',()=>{const a=b.dataset.act;if(a==='left')move(-1);if(a==='right')move(1);if(a==='rotate')rotatePiece();if(a==='drop')softDrop();}));
+document.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key))e.preventDefault();if(e.key==='ArrowLeft')move(-1);if(e.key==='ArrowRight')move(1);if(e.key==='ArrowUp')rotatePiece();if(e.key==='ArrowDown')softDrop();if(e.key===' ')hardDrop();if(e.key==='Escape'&&running)pauseBtn.click();});
+let touchStart=null;
+canvas.addEventListener('touchstart',e=>{touchStart={x:e.changedTouches[0].clientX,y:e.changedTouches[0].clientY};},{passive:true});
+canvas.addEventListener('touchend',e=>{if(!touchStart)return;const dx=e.changedTouches[0].clientX-touchStart.x,dy=e.changedTouches[0].clientY-touchStart.y;if(Math.abs(dx)>25)move(dx>0?1:-1);if(dy>30)softDrop();if(dy< -30)rotatePiece();touchStart=null;},{passive:true});
+function answer(){
+ finalOverlay.classList.remove('show');thanksOverlay.classList.add('show');
+}
+document.getElementById('yes').addEventListener('click',answer);
+document.getElementById('sure').addEventListener('click',answer);
+document.getElementById('closeThanks').addEventListener('click',()=>{thanksOverlay.classList.remove('show');messageEl.innerHTML='♥ <b>Fin del juego.</b> Gracias por jugar algo hecho especialmente para ti.';});
+draw();drawNext();
+})();
+</script>
+</body>
+</html>
